@@ -85,7 +85,7 @@ if "$count" -gt 0; then
         --environment-name "${APP}-${ENV}" \
         --version-label "$VERSION_LABEL"
 else
-    MANIFEST="${APP}/env-${ENV}.yml"
+    MANIFEST="${APP}/${ENV}/env-${ENV}.yml"
     echo "fetching storage location"
     EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
 
