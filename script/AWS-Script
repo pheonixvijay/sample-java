@@ -33,18 +33,18 @@ if [ -z "$App_Version" ]; then
     abort "cannot proceed unless \$App_Version is specified"
 fi
 
-status "fetching storage location"
+echo "fetching storage location"
 
 EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
 
 
-status "uploading application version to S3"
+echo "uploading application version to S3"
 VERSION_LABEL="${APP}-$(date -u +"%Y%m%dT%H%M%SZ")-${App_Version}"
-ARTIFACT=/var/jenkins_home/workspace/SAMPLE/build/libs/sample-0.0.1-SNAPSHOT.war
+ARTIFACT=/var/jenkins_home/workspace/sample-svc/build/libs/sample-0.0.1-SNAPSHOT.war
 
 aws s3 cp --quiet "$ARTIFACT" "s3://${EB_BUCKET}/${APP}/${VERSION_LABEL}.war"
 
-status "creating application version in EB"
+echo "creating application version in EB"
 aws elasticbeanstalk create-application-version \
     --application-name "$APP" \
     --version-label "$VERSION_LABEL" \
@@ -54,7 +54,7 @@ aws elasticbeanstalk create-application-version \
     --query 'ApplicationVersion.VersionLabel' \
     --output text
 
-status "waiting for application version to be processed"
+echo "waiting for application version to be processed"
 
 while true; do
   STATUS=$(aws elasticbeanstalk describe-application-versions \
@@ -70,4 +70,32 @@ while true; do
   break
 done
 
-status "application version ready"
+echo "application version ready"
+
+echo "Check if environment exist"
+count=$(aws elasticbeanstalk describe-environments \
+        --application-name "$APP" \
+        --environment-names "${APP}-${ENV}" \
+        --query 'length(Environments)' \
+        --output text)
+
+if "$count" -gt 0; then
+    aws elasticbeanstalk update-environment \
+        --application-name "$APP" \
+        --environment-name "${APP}-${ENV}" \
+        --version-label "$VERSION_LABEL"
+else
+    MANIFEST="${APP}/${ENV}/env-${ENV}.yml"
+    echo "fetching storage location"
+    EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
+
+    echo "updating environment template"
+    aws s3 cp "$MANIFEST" "s3://${EB_BUCKET}/resources/templates/${APP}/${APP}-${ENV}"
+
+    echo "creating environment"
+    aws elasticbeanstalk create-environment \
+        --application-name "$APP" \
+        --environment-name "${APP}-${ENV}" \
+        --template-name "${APP}-${ENV}" \
+        --version-label "$VERSION_LABEL"
+fi

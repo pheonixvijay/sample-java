@@ -7,7 +7,7 @@ pipeline {
 
     parameters{
         choice(name: 'APP',
-                choices: deployApplications
+                choices: deployApplications,
                 description: 'Choose the application to deploy')
 
         string(name: 'App_Version', 
@@ -15,7 +15,7 @@ pipeline {
                 defaultValue: '')
 
         choice(name: 'ENV',
-                choices: deployEnvironments
+                choices: deployEnvironments,
                 description: 'Choose the application to deploy.')
     }
 
@@ -39,8 +39,10 @@ pipeline {
         stage('deploy'){
             steps{
                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh 'AWS-Script'
+                    sh 'chmod +x script/AWS-Script'
+                    sh 'script/AWS-Script'
                 }
             }
         }
     }
+}
