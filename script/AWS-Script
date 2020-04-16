@@ -78,8 +78,9 @@ count=$(aws elasticbeanstalk describe-environments \
         --environment-names "${APP}-${ENV}" \
         --query 'length(Environments)' \
         --output text)
-
-if "$count" -gt 0; then
+echo $count
+echo "$count" -gt 0
+if test "$count" -gt 0; then
     echo "updating the environment"
     aws elasticbeanstalk update-environment \
         --application-name "$APP" \
