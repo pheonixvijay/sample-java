@@ -7,7 +7,7 @@ pipeline {
 
     parameters{
         choice(name: 'APP',
-                choices: deployApplications
+                choices: deployApplications,
                 description: 'Choose the application to deploy')
 
         string(name: 'App_Version', 
@@ -15,7 +15,7 @@ pipeline {
                 defaultValue: '')
 
         choice(name: 'ENV',
-                choices: deployEnvironments
+                choices: deployEnvironments,
                 description: 'Choose the application to deploy.')
     }
 
