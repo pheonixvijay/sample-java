@@ -16,7 +16,7 @@ pipeline {
 
         choice(name: 'ENV',
                 choices: deployEnvironments,
-                description: 'Choose the application to deploy.')
+                description: 'Choose the environment to deploy.')
     }
 
     environment {
