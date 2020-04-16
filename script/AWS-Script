@@ -80,6 +80,7 @@ count=$(aws elasticbeanstalk describe-environments \
         --output text)
 
 if "$count" -gt 0; then
+    echo "updating the environment"
     aws elasticbeanstalk update-environment \
         --application-name "$APP" \
         --environment-name "${APP}-${ENV}" \
