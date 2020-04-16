@@ -98,3 +98,4 @@ else
         --environment-name "${APP}-${ENV}" \
         --template-name "${APP}-${ENV}" \
         --version-label "$VERSION"
+fi
