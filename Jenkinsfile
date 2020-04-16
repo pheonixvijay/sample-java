@@ -6,11 +6,14 @@ pipeline {
     agent { dockerfile true}
 
     parameters{
-        choices: deployApplications
-        description: 'Choose the application to deploy')
+        choice(name: 'APP',
+                choices: deployApplications
+                description: 'Choose the application to deploy')
+
         string(name: 'App_Version', 
                 description: 'The tag of the application to deploy',
                 defaultValue: '')
+
         choice(name: 'ENV',
                 choices: deployEnvironments
                 description: 'Choose the application to deploy.')
