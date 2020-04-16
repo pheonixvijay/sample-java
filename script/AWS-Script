@@ -89,10 +89,10 @@ else
     echo "fetching storage location"
     EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
 
-    status "updating environment template"
+    echo "updating environment template"
     aws s3 cp "$MANIFEST" "s3://${EB_BUCKET}/resources/templates/${APP}/${APP}-${ENV}"
 
-    status "creating environment"
+    echo "creating environment"
     aws elasticbeanstalk create-environment \
         --application-name "$APP" \
         --environment-name "${APP}-${ENV}" \
