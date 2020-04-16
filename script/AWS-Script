@@ -97,5 +97,5 @@ else
         --application-name "$APP" \
         --environment-name "${APP}-${ENV}" \
         --template-name "${APP}-${ENV}" \
-        --version-label "$VERSION"
+        --version-label "$VERSION_LABEL"
 fi
