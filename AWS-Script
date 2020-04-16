@@ -1,0 +1,73 @@
+#!/bin/sh
+
+# The name of the Elastic Beanstalk application to manage
+: ${APP:=}
+
+# If deploying an application version, the docker tag of the version to create
+# and release.
+: ${App_Version:=}
+
+# The environment on which to operate (typically "qa" or "prod"). Note that the
+# name of the environment in Elastic Beanstalk will be prefixed with the name of
+# the application.
+: ${ENV:=}
+
+# https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin
+set -e
+
+abort () {
+    echo "Error:" "$@" >&2
+    echo "Aborting!" >&2
+    exit 1
+}
+
+if [ -z "$APP" ]; then
+    abort "cannot proceed unless \$APP is specified"
+fi
+
+if [ -z "$ENV" ]; then
+    abort "cannot proceed unless \$ENV is specified"
+fi
+
+if [ -z "$App_Version" ]; then
+    abort "cannot proceed unless \$App_Version is specified"
+fi
+
+status "fetching storage location"
+
+EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
+
+
+status "uploading application version to S3"
+VERSION_LABEL="${APP}-$(date -u +"%Y%m%dT%H%M%SZ")-${App_Version}"
+ARTIFACT=/var/jenkins_home/workspace/SAMPLE/build/libs/sample-0.0.1-SNAPSHOT.war
+
+aws s3 cp --quiet "$ARTIFACT" "s3://${EB_BUCKET}/${APP}/${VERSION_LABEL}.war"
+
+status "creating application version in EB"
+aws elasticbeanstalk create-application-version \
+    --application-name "$APP" \
+    --version-label "$VERSION_LABEL" \
+    --source-bundle "S3Bucket=${EB_BUCKET},S3Key=${APP}/${VERSION_LABEL}.war" \
+    --process \
+    --auto-create-application \
+    --query 'ApplicationVersion.VersionLabel' \
+    --output text
+
+status "waiting for application version to be processed"
+
+while true; do
+  STATUS=$(aws elasticbeanstalk describe-application-versions \
+               --application-name "$APP" \
+               --version-label "$VERSION_LABEL" \
+               --query 'ApplicationVersions[0].Status' \
+               --output text)
+  if [ "$STATUS" = "PROCESSING" ]; then sleep 2; continue; fi
+  if [ "$STATUS" = "FAILED" ]; then
+    status "application version processing failed"
+    exit 1
+  fi
+  break
+done
+
+status "application version ready"
