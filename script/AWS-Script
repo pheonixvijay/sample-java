@@ -71,3 +71,30 @@ while true; do
 done
 
 echo "application version ready"
+
+echo "Check if environment exist"
+count=$(aws elasticbeanstalk describe-environments \
+        --application-name "$APP" \
+        --environment-names "${APP}-${ENV}" \
+        --query 'length(Environments)' \
+        --output text)
+
+if "$count" -gt 0; then
+    aws elasticbeanstalk update-environment \
+        --application-name "$APP" \
+        --environment-name "${APP}-${ENV}" \
+        --version-label "$VERSION_LABEL"
+else
+    MANIFEST="${APP}/env-${ENV}.yml"
+    echo "fetching storage location"
+    EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
+
+    status "updating environment template"
+    aws s3 cp "$MANIFEST" "s3://${EB_BUCKET}/resources/templates/${APP}/${APP}-${ENV}"
+
+    status "creating environment"
+    aws elasticbeanstalk create-environment \
+        --application-name "$APP" \
+        --environment-name "${APP}-${ENV}" \
+        --template-name "${APP}-${ENV}" \
+        --version-label "$VERSION"
