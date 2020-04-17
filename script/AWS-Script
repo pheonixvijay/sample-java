@@ -72,7 +72,7 @@ done
 
 echo "application version ready"
 
-if [ "$ENV" != 'Prod' ]; then
+if [ "$ENV" != 'prod' ]; then
     echo "Check if environment exist"
     count=$(aws elasticbeanstalk describe-environments \
         --application-name "$APP" \
@@ -184,7 +184,7 @@ else
         fi
         break
     done
-    
+
     #Swap cnames
     echo 'swapping cnames back'
     aws elasticbeanstalk swap-environment-cnames \
