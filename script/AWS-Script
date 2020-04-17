@@ -46,153 +46,152 @@ aws s3 cp --quiet "$ARTIFACT" "s3://${EB_BUCKET}/${APP}/${VERSION_LABEL}.war"
 
 echo "creating application version in EB"
 aws elasticbeanstalk create-application-version \
-    --application-name "$APP" \
-    --version-label "$VERSION_LABEL" \
-    --source-bundle "S3Bucket=${EB_BUCKET},S3Key=${APP}/${VERSION_LABEL}.war" \
-    --process \
-    --auto-create-application \
-    --query 'ApplicationVersion.VersionLabel' \
-    --output text
+--application-name "$APP" \
+--version-label "$VERSION_LABEL" \
+--source-bundle "S3Bucket=${EB_BUCKET},S3Key=${APP}/${VERSION_LABEL}.war" \
+--process \
+--auto-create-application \
+--query 'ApplicationVersion.VersionLabel' \
+--output text
 
 echo "waiting for application version to be processed"
 
 while true; do
-  STATUS=$(aws elasticbeanstalk describe-application-versions \
-               --application-name "$APP" \
-               --version-label "$VERSION_LABEL" \
-               --query 'ApplicationVersions[0].Status' \
-               --output text)
-  if [ "$STATUS" = "PROCESSING" ]; then sleep 2; continue; fi
-  if [ "$STATUS" = "FAILED" ]; then
-    status "application version processing failed"
-    exit 1
-  fi
-  break
-done
-
-echo "application version ready"
-
-if "$ENV" -ne 'Prod'; then
-echo "Check if environment exist"
-count=$(aws elasticbeanstalk describe-environments \
+    STATUS=$(aws elasticbeanstalk describe-application-versions \
         --application-name "$APP" \
-        --environment-names "${APP}-${ENV}" \
-        --query 'length(Environments)' \
-        --output text)
-
-if test "$count" -gt 0; then
-    echo "updating the environment"
-    aws elasticbeanstalk update-environment \
-        --application-name "$APP" \
-        --environment-name "${APP}-${ENV}" \
-        --version-label "$VERSION_LABEL"
-else
-    MANIFEST="${APP}/${ENV}/env-${ENV}.yml"
-    echo "fetching storage location"
-    EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
-
-    echo "updating environment template"
-    aws s3 cp "$MANIFEST" "s3://${EB_BUCKET}/resources/templates/${APP}/${APP}-${ENV}"
-
-    echo "creating environment"
-    aws elasticbeanstalk create-environment \
-        --application-name "$APP" \
-        --environment-name "${APP}-${ENV}" \
-        --template-name "${APP}-${ENV}" \
-        --version-label "$VERSION_LABEL"
-fi
-else
-    echo 'deploying prod'
-    #Get Old Version
-    PROD_VERSION=$(aws elasticbeanstalk describe-environments \
-               --application-name "$APP" \
-               --environment-names "${APP}-${ENV}" \
-               --query 'Environments[0].VersionLabel' \
-               --output text)
-
-    #Cloning Environment
-    echo 'creating clone environment'
-    aws elasticbeanstalk create-environment \
-        --application-name $APP \
-        --environment-name ${APP}-${ENV}-clone \
-        --template-name ${APP}-${ENV} \
-        --version-label $PROD_VERSION
-
-    #wait
-    while true; do
-    STATUS=$(aws elasticbeanstalk describe-environments \
-                --application-name "$APP" \
-                --environment-name "${APP}-${ENV}-clone" \
-                --query 'Environments[0].Status' \
-                --output text)
-    if [ "$STATUS" = "Updating" ]; then sleep 2; continue; fi
+        --version-label "$VERSION_LABEL" \
+        --query 'ApplicationVersions[0].Status' \
+    --output text)
+    if [ "$STATUS" = "PROCESSING" ]; then sleep 2; continue; fi
     if [ "$STATUS" = "FAILED" ]; then
         status "application version processing failed"
         exit 1
     fi
     break
-    done
+done
 
+echo "application version ready"
+
+if [ "$ENV" != 'Prod' ]; then
+    echo "Check if environment exist"
+    count=$(aws elasticbeanstalk describe-environments \
+        --application-name "$APP" \
+        --environment-names "${APP}-${ENV}" \
+        --query 'length(Environments)' \
+    --output text)
+    
+    if test "$count" -gt 0; then
+        echo "updating the environment"
+        aws elasticbeanstalk update-environment \
+        --application-name "$APP" \
+        --environment-name "${APP}-${ENV}" \
+        --version-label "$VERSION_LABEL"
+    else
+        MANIFEST="${APP}/${ENV}/env-${ENV}.yml"
+        echo "fetching storage location"
+        EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
+        
+        echo "updating environment template"
+        aws s3 cp "$MANIFEST" "s3://${EB_BUCKET}/resources/templates/${APP}/${APP}-${ENV}"
+        
+        echo "creating environment"
+        aws elasticbeanstalk create-environment \
+        --application-name "$APP" \
+        --environment-name "${APP}-${ENV}" \
+        --template-name "${APP}-${ENV}" \
+        --version-label "$VERSION_LABEL"
+    fi
+else
+    echo 'deploying prod'
+    #Get Old Version
+    PROD_VERSION=$(aws elasticbeanstalk describe-environments \
+        --application-name "$APP" \
+        --environment-names "${APP}-${ENV}" \
+        --query 'Environments[0].VersionLabel' \
+    --output text)
+    
+    #Cloning Environment
+    echo 'creating clone environment'
+    aws elasticbeanstalk create-environment \
+    --application-name $APP \
+    --environment-name ${APP}-${ENV}-clone \
+    --template-name ${APP}-${ENV} \
+    --version-label $PROD_VERSION
+    
+    #wait
+    while true; do
+        STATUS=$(aws elasticbeanstalk describe-environments \
+            --application-name "$APP" \
+            --environment-name "${APP}-${ENV}-clone" \
+            --query 'Environments[0].Status' \
+        --output text)
+        if [ "$STATUS" = "Updating" ]; then sleep 2; continue; fi
+        if [ "$STATUS" = "FAILED" ]; then
+            status "application version processing failed"
+            exit 1
+        fi
+        break
+    done
+    
     #Swap cnames
     echo 'swapping cnames'
     aws elasticbeanstalk swap-environment-cnames \
     --source-environment-name ${APP}-${ENV} \
     --destination-environment-name ${APP}-${ENV}-clone
-
+    
     #Deploy Production
     echo 'deploying production'
     echo "Check if environment exist"
     count=$(aws elasticbeanstalk describe-environments \
-            --application-name "$APP" \
-            --environment-names "${APP}-${ENV}" \
-            --query 'length(Environments)' \
-            --output text)    
-
+        --application-name "$APP" \
+        --environment-names "${APP}-${ENV}" \
+        --query 'length(Environments)' \
+    --output text)
+    
     if test "$count" -gt 0; then
         echo "updating the environment"
         aws elasticbeanstalk update-environment \
-            --application-name $APP \
-            --environment-name ${APP}-${ENV} \
-            --version-label $VERSION_LABEL
+        --application-name $APP \
+        --environment-name ${APP}-${ENV} \
+        --version-label $VERSION_LABEL
     else
         MANIFEST="${APP}/${ENV}/env-${ENV}.yml"
         echo "fetching storage location"
         EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)
-
+        
         echo "updating environment template"
         aws s3 cp "$MANIFEST" "s3://${EB_BUCKET}/resources/templates/${APP}/${APP}-${ENV}"
-
+        
         echo "creating environment"
         aws elasticbeanstalk create-environment \
-            --application-name $APP \
-            --environment-name ${APP}-${ENV} \
-            --template-name ${APP}-${ENV} \
-            --version-label $VERSION_LABEL
+        --application-name $APP \
+        --environment-name ${APP}-${ENV} \
+        --template-name ${APP}-${ENV} \
+        --version-label $VERSION_LABEL
     fi
-
-     #wait
+    
+    #wait
     while true; do
-    STATUS=$(aws elasticbeanstalk describe-environments \
-                --application-name "$APP" \
-                --environment-name "${APP}-${ENV}" \
-                --query 'Environments[0].Status' \
-                --output text)
-    if [ "$STATUS" = "Updating" ]; then sleep 2; continue; fi
-    if [ "$STATUS" = "FAILED" ]; then
-        status "application version processing failed"
-        exit 1
-    fi
-    break
+        STATUS=$(aws elasticbeanstalk describe-environments \
+            --application-name "$APP" \
+            --environment-name "${APP}-${ENV}" \
+            --query 'Environments[0].Status' \
+        --output text)
+        if [ "$STATUS" = "Updating" ]; then sleep 2; continue; fi
+        if [ "$STATUS" = "FAILED" ]; then
+            status "application version processing failed"
+            exit 1
+        fi
+        break
     done
-
+    
     #Swap cnames
     echo 'swapping cnames back'
     aws elasticbeanstalk swap-environment-cnames \
     --source-environment-name ${APP}-${ENV}-clone \
     --destination-environment-name ${APP}-${ENV}
-
+    
     #terminate clone environment
     echo 'terminating clone environment'
     aws elasticbeanstalk terminate-environment --environment-name ${APP}-${ENV}-clone
-
 fi

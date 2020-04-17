@@ -1,4 +1,5 @@
 #!groovy
+
 def deployApplications = ['svc-1', 'svc-2'].join('\n')
 def deployEnvironments = ['dev', 'qa', 'prod'].join('\n')
 
