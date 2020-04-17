@@ -10,7 +10,7 @@ OptionSettings:
     UpperThreshold: '1000'
     MeasureName: RequestCount
     Unit: Count
-  aws.autoscaling.asg:
+  aws:autoscaling:asg:
     Availability Zones: Any    
     MaxSize: '4'
     MinSize: '2'
