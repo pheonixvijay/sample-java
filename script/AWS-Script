@@ -184,14 +184,4 @@ else
         fi
         break
     done
-    
-    #Swap cnames
-    echo 'swapping cnames back'
-    aws elasticbeanstalk swap-environment-cnames \
-    --source-environment-name ${APP}-${ENV}-clone \
-    --destination-environment-name ${APP}-${ENV}
-    
-    #terminate clone environment
-    echo 'terminating clone environment'
-    aws elasticbeanstalk terminate-environment --environment-name ${APP}-${ENV}-clone
 fi

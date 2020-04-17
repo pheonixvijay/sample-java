@@ -2,6 +2,7 @@
 
 def deployApplications = ['svc-1', 'svc-2'].join('\n')
 def deployEnvironments = ['dev', 'qa', 'prod'].join('\n')
+def swapEnvironments=['yes','no'].join('\n')
 
 pipeline {
     agent { dockerfile true}
@@ -18,6 +19,9 @@ pipeline {
         choice(name: 'ENV',
                 choices: deployEnvironments,
                 description: 'Choose the environment to deploy.')
+        choice(name: 'SWAP',
+                choices: swapEnvironments,
+                description: 'Choose to swap Prod Envs.')
     }
 
     environment {
@@ -26,24 +30,45 @@ pipeline {
 
     stages{
         stage('Build'){
-            steps{
-                script {
-                        def label = "#${currentBuild.number} ${params.APP} " +
-                                    "${params.ENV}"
-                        currentBuild.displayName = label
-                }
-                script{
-                    sh 'gradle build'
+            WHEN(params.SWAP=='no'){
+                steps{
+                    script {
+                            def label = "#${currentBuild.number} ${params.APP} " +
+                                        "${params.ENV}"
+                            currentBuild.displayName = label
+                    }
+                    script{
+                        sh 'gradle build'
+                    }
                 }
             }
         }
         stage('deploy'){
-            steps{
-                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh 'chmod +x script/AWS-Script'
-                    sh 'script/AWS-Script'
+             WHEN(params.SWAP=='no'){
+                steps{
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        sh 'chmod +x script/AWS-Script'
+                        sh 'script/AWS-Script'
+                    }
                 }
-            }
+             }
+        }
+        stage('swap prod'){
+             WHEN(params.SWAP=='yes'){
+                steps{
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        //Swap CNAMES
+                        echo 'swapping cnames back'
+                        sh 'aws elasticbeanstalk swap-environment-cnames \
+                            --source-environment-name ${APP}-${ENV}-clone \
+                            --destination-environment-name ${APP}-${ENV}'
+    
+                            //terminate clone environment
+                        echo 'terminating clone environment'
+                        sh 'aws elasticbeanstalk terminate-environment --environment-name ${APP}-${ENV}-clone'
+                    }
+                }
+             }
         }
     }
 }
