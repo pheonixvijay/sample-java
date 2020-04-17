@@ -5,8 +5,6 @@ EnvironmentTier:
 Platform:
   PlatformArn: arn:aws:elasticbeanstalk:us-west-1::platform/Tomcat 8.5 with Java 8 running on 64bit Amazon Linux/3.3.4
 OptionSettings:
-  aws:ec2:instances:
-    InstanceTypes: t2.micro
   AWSEBCloudwatchAlarmLow.aws:autoscaling:trigger:
     LowerThreshold: '500'
     UpperThreshold: '1000'
