@@ -30,30 +30,36 @@ pipeline {
 
     stages{
         stage('Build'){
-            WHEN(params.SWAP=='no'){
-                steps{
-                    script {
-                            def label = "#${currentBuild.number} ${params.APP} " +
-                                        "${params.ENV}"
-                            currentBuild.displayName = label
-                    }
-                    script{
-                        sh 'gradle build'
-                    }
+            when {
+                expression { params.SWAP=='no' }
+            }
+            steps{
+                script {
+                        def label = "#${currentBuild.number} ${params.APP} " +
+                                    "${params.ENV}"
+                        currentBuild.displayName = label
+                }
+                script{
+                    sh 'gradle build'
+                }
+            }
+            
+        }
+        stage('deploy'){
+            when {
+                expression { params.SWAP=='no' }
+            }
+            steps{
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh 'chmod +x script/AWS-Script'
+                    sh 'script/AWS-Script'
                 }
             }
         }
-        stage('deploy'){
-             WHEN(params.SWAP=='no'){
-                steps{
-                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                        sh 'chmod +x script/AWS-Script'
-                        sh 'script/AWS-Script'
-                    }
-                }
-             }
-        }
         stage('swap prod'){
+            when {
+                expression { params.SWAP=='yes' && params.ENV=='prod' }
+            }
              WHEN(params.SWAP=='yes' && params.ENV=='prod'){
                 steps{
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
@@ -62,7 +68,6 @@ pipeline {
                         sh 'chmod +x script/AWS-SWAPScript'
                         sh 'script/AWS-SWAPScript'
                     }
-                }
              }
         }
     }
