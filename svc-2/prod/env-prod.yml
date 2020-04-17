@@ -1,14 +1,28 @@
 AWSConfigurationTemplateVersion: 1.1.0.0
-Platform:
-  PlatformArn: arn:aws:elasticbeanstalk:us-west-1::platform/Tomcat 8.5 with Java 8 running on 64bit Amazon Linux/3.3.4
 EnvironmentTier:
   Type: Standard
   Name: WebServer
+Platform:
+  PlatformArn: arn:aws:elasticbeanstalk:us-west-1::platform/Tomcat 8.5 with Java 8 running on 64bit Amazon Linux/3.3.4
 OptionSettings:
+  AWSEBCloudwatchAlarmLow.aws:autoscaling:trigger:
+    LowerThreshold: '500'
+    UpperThreshold: '1000'
+    MeasureName: RequestCount
+    Unit: Count
+  aws.autoscaling.asg:
+    Availability Zones: Any    
+    MaxSize: '4'
+    MinSize: '2'
   aws:elasticbeanstalk:environment:
-    EnvironmentType: SingleInstance
-    ServiceRole: arn:aws:iam::675295255993:role/aws-elasticbeanstalk-service-role
+    EnvironmentType: LoadBalanced
+    ServiceRole: aws-elasticbeanstalk-service-role
   aws:elasticbeanstalk:healthreporting:system:
     SystemType: enhanced
   aws:autoscaling:launchconfiguration:
     IamInstanceProfile: aws-elasticbeanstalk-ec2-role
+  aws:autoscaling:updatepolicy:rollingupdate:
+    RollingUpdateType: Immutable
+    RollingUpdateEnabled: true
+  aws:autoscaling:launchconfiguration:
+    InstanceType: t2.nano
