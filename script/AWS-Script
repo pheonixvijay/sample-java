@@ -40,7 +40,7 @@ EB_BUCKET=$(aws elasticbeanstalk create-storage-location --query S3Bucket --outp
 
 echo "uploading application version to S3"
 VERSION_LABEL="${APP}-${App_Version}"
-ARTIFACT=/var/jenkins_home/workspace/sample-svc/build/libs/sample-0.0.1-SNAPSHOT.war
+ARTIFACT=/var/jenkins_home/workspace/sample-java/build/libs/sample-0.0.1-SNAPSHOT.war
 
 aws s3 cp --quiet "$ARTIFACT" "s3://${EB_BUCKET}/${APP}/${VERSION_LABEL}.war"
 
