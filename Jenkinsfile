@@ -54,18 +54,13 @@ pipeline {
              }
         }
         stage('swap prod'){
-             WHEN(params.SWAP=='yes'){
+             WHEN(params.SWAP=='yes' && params.ENV='prod'){
                 steps{
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                         //Swap CNAMES
-                        echo 'swapping cnames back'
-                        sh 'aws elasticbeanstalk swap-environment-cnames \
-                            --source-environment-name ${APP}-${ENV}-clone \
-                            --destination-environment-name ${APP}-${ENV}'
-    
-                            //terminate clone environment
-                        echo 'terminating clone environment'
-                        sh 'aws elasticbeanstalk terminate-environment --environment-name ${APP}-${ENV}-clone'
+                        echo 'starting environment swap'
+                        sh 'chmod +x script/AWS-SWAPScript'
+                        sh 'script/AWS-SWAPScript'
                     }
                 }
              }
