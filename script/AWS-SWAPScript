@@ -33,7 +33,7 @@ if [ -z "$App_Version" ]; then
     abort "cannot proceed unless \$App_Version is specified"
 fi
 
-if [ "$ENV" == 'Prod' ]; then
+if [ "$ENV" == 'prod' ]; then
     echo "Check if environment exist"
     count_clone=$(aws elasticbeanstalk describe-environments \
         --application-name "$APP" \
