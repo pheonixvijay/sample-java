@@ -2,6 +2,7 @@
 
 def deployApplications = ['svc-1', 'svc-2'].join('\n')
 def deployEnvironments = ['dev', 'qa', 'prod'].join('\n')
+def swapEnvironments=['no','yes'].join('\n')
 
 pipeline {
     agent { dockerfile true}
@@ -18,6 +19,9 @@ pipeline {
         choice(name: 'ENV',
                 choices: deployEnvironments,
                 description: 'Choose the environment to deploy.')
+        choice(name: 'SWAP',
+                choices: swapEnvironments,
+                description: 'Choose to swap Prod Envs.')
     }
 
     environment {
@@ -26,6 +30,9 @@ pipeline {
 
     stages{
         stage('Build'){
+            when {
+                expression { params.SWAP=='no' }
+            }
             steps{
                 script {
                         def label = "#${currentBuild.number} ${params.APP} " +
@@ -36,14 +43,31 @@ pipeline {
                     sh 'gradle build'
                 }
             }
+            
         }
         stage('deploy'){
+            when {
+                expression { params.SWAP=='no' }
+            }
             steps{
                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     sh 'chmod +x script/AWS-Script'
                     sh 'script/AWS-Script'
                 }
             }
+        }
+        stage('swap prod'){
+            when {
+                expression { params.SWAP=='yes' && params.ENV=='prod' }
+            }
+             steps{
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        //Swap CNAMES
+                        echo 'starting environment swap'
+                        sh 'chmod +x script/AWS-SWAPScript'
+                        sh 'script/AWS-SWAPScript'
+                    }
+             }
         }
     }
 }
