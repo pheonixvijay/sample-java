@@ -1,0 +1,62 @@
+#!/bin/sh
+
+# The name of the Elastic Beanstalk application to manage
+: ${APP:=}
+
+# If deploying an application version, the docker tag of the version to create
+# and release.
+: ${App_Version:=}
+
+# The environment on which to operate (typically "qa" or "prod"). Note that the
+# name of the environment in Elastic Beanstalk will be prefixed with the name of
+# the application.
+: ${ENV:=}
+
+# https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin
+set -e
+
+abort () {
+    echo "Error:" "$@" >&2
+    echo "Aborting!" >&2
+    exit 1
+}
+
+if [ -z "$APP" ]; then
+    abort "cannot proceed unless \$APP is specified"
+fi
+
+if [ -z "$ENV" ]; then
+    abort "cannot proceed unless \$ENV is specified"
+fi
+
+if [ -z "$App_Version" ]; then
+    abort "cannot proceed unless \$App_Version is specified"
+fi
+
+if [ "$ENV" == 'Prod' ]; then
+    echo "Check if environment exist"
+    count_clone=$(aws elasticbeanstalk describe-environments \
+        --application-name "$APP" \
+        --environment-names "${APP}-${ENV}-clone" \
+        --query 'length(Environments)' \
+    --output text)
+
+    count_prod=$(aws elasticbeanstalk describe-environments \
+        --application-name "$APP" \
+        --environment-names "${APP}-${ENV}" \
+        --query 'length(Environments)' \
+    --output text)
+    
+    if test "$count_clone" -gt 0 -a "$count_prod" -gt 0; then
+        echo "swapping environments"
+        aws elasticbeanstalk swap-environment-cnames \
+                            --source-environment-name ${APP}-${ENV}-clone \
+                            --destination-environment-name ${APP}-${ENV}
+        
+        sleep 5s
+        echo "terminating clone"
+        aws elasticbeanstalk terminate-environment --environment-name ${APP}-${ENV}-clone
+    else
+        echo "No Environments to swap"
+    fi
+fi
