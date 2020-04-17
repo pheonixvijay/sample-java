@@ -2,7 +2,7 @@
 
 def deployApplications = ['svc-1', 'svc-2'].join('\n')
 def deployEnvironments = ['dev', 'qa', 'prod'].join('\n')
-def swapEnvironments=['yes','no'].join('\n')
+def swapEnvironments=['no','yes'].join('\n')
 
 pipeline {
     agent { dockerfile true}
