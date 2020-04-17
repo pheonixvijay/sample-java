@@ -134,7 +134,7 @@ else
                 --environment-name "${APP}-${ENV}-clone" \
                 --query 'Environments[0].Status' \
             --output text)
-            if [ "$STATUS" = "Updating" ]; then sleep 2; continue; fi
+            if [ "$STATUS" = "Launching" ]; then sleep 2; continue; fi
             if [ "$STATUS" = "FAILED" ]; then
                 status "application version processing failed"
                 exit 1
@@ -179,7 +179,7 @@ else
             --environment-name "${APP}-${ENV}" \
             --query 'Environments[0].Status' \
         --output text)
-        if [ "$STATUS" = "Updating" ]; then sleep 2; continue; fi
+        if [ "$STATUS" = "Launching" ]; then sleep 2; continue; fi
         if [ "$STATUS" = "FAILED" ]; then
             status "application version processing failed"
             exit 1
