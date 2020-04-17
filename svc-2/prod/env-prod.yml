@@ -25,4 +25,4 @@ OptionSettings:
     RollingUpdateType: Immutable
     RollingUpdateEnabled: true
   aws:autoscaling:launchconfiguration:
-    InstanceType: t2.nano
+    InstanceType: t2.micro
